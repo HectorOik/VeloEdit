@@ -168,9 +168,6 @@ def run_benchmark(args, analyzer):
         print(f"[Config] Will generate {len(blend_weights_list)} strength files per image")
 
         for idx, image_id in enumerate(tqdm(image_ids, desc=f"int_steps={int_steps}")):
-            if idx < 600:
-                print(f"[Warning] Image {image_id} skipped (idx < 600)")
-                continue
             entry = mapping_data[image_id]
             image_rel_path = entry['image_path']
             instruction = entry['editing_instruction']

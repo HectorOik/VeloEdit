@@ -15,7 +15,7 @@ set -e
 
 # ======== Default Configuration ========
 CUDA_DEVICE=${CUDA_DEVICE:-0}
-BENCHMARK_PATH="/root/lzq2/projects/SliderEdit/benchmark"
+BENCHMARK_PATH="./benchmark"
 OUTPUT_PATH="./benchmark_intervention_outputs_flux"
 
 # Sampling (flux_config defaults)
