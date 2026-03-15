@@ -8,6 +8,7 @@ import torch
 class InterventionConfig:
     steps: int = 0
     similarity_threshold: float = 0.8
+    similarity_mode: str = "elementwise"
     enable_blend: bool = False
     blend_weight: float = 0.5
 

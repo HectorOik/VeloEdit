@@ -204,6 +204,7 @@ def analyze():
         seed = data.get("seed", 42)
         intervention_steps = data.get("intervention_steps", 0)
         similarity_threshold = data.get("similarity_threshold", 0.8)
+        similarity_mode = data.get("similarity_mode", "elementwise")
         enable_blend = data.get("enable_blend", False)
         blend_weight = data.get("blend_weight", 0.5)
 
@@ -235,6 +236,7 @@ def analyze():
             "seed": seed,
             "intervention_steps": intervention_steps,
             "similarity_threshold": similarity_threshold,
+            "similarity_mode": similarity_mode,
             "enable_blend": enable_blend,
             "blend_weight": blend_weight,
         }

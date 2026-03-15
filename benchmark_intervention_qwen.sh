@@ -32,6 +32,7 @@ SEED=42
 # Velocity intervention
 INTERVENTION_STEPS="6"
 SIMILARITY_THRESHOLD=0.8
+SIMILARITY_MODE="elementwise"
 ENABLE_BLEND=""
 BLEND_WEIGHTS="0.0,0.2,0.4,0.6,0.8"
 
@@ -115,6 +116,10 @@ while [[ $# -gt 0 ]]; do
             SIMILARITY_THRESHOLD="$2"
             shift 2
             ;;
+        --similarity-mode)
+            SIMILARITY_MODE="$2"
+            shift 2
+            ;;
         --blend)
             ENABLE_BLEND="yes"
             shift
@@ -173,6 +178,7 @@ while [[ $# -gt 0 ]]; do
             echo "Intervention options:"
             echo "  --int-steps LIST        Comma-separated intervention step counts (default: $INTERVENTION_STEPS)"
             echo "  --threshold F           Similarity threshold (default: $SIMILARITY_THRESHOLD)"
+            echo "  --similarity-mode MODE  Similarity mode: elementwise or cosine (default: $SIMILARITY_MODE)"
             echo "  --blend                 Enable blending for low similarity elements"
             echo "  --blend-weights LIST    Comma-separated blend weights (a values) to benchmark (default: $BLEND_WEIGHTS)"
             echo ""
@@ -209,6 +215,7 @@ echo "  Seed:                  $SEED"
 echo "  ---"
 echo "  Intervention Steps:    $INTERVENTION_STEPS"
 echo "  Similarity Threshold:  $SIMILARITY_THRESHOLD"
+echo "  Similarity Mode:       $SIMILARITY_MODE"
 [ -n "$ENABLE_BLEND" ]   && echo "  Blend:                 enabled"
 echo "  Blend Weights:         $BLEND_WEIGHTS"
 [ -n "$MODEL_PATH" ]     && echo "  Model Path:            $MODEL_PATH"
@@ -234,6 +241,7 @@ CMD="python3 ${SCRIPT_DIR}/benchmark_intervention_qwen.py \
     --seed $SEED \
     --intervention-steps $INTERVENTION_STEPS \
     --similarity-threshold $SIMILARITY_THRESHOLD \
+    --similarity-mode $SIMILARITY_MODE \
     --blend-weights $BLEND_WEIGHTS"
 
 [ -n "$ENABLE_BLEND" ]     && CMD="$CMD --enable-blend"

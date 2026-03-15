@@ -63,6 +63,7 @@ class BaseVelocityAnalyzer(ABC):
         return InterventionConfig(
             steps=intervention_config.get("intervention_steps", 0),
             similarity_threshold=intervention_config.get("similarity_threshold", 0.8),
+            similarity_mode=intervention_config.get("similarity_mode", "elementwise"),
             enable_blend=intervention_config.get("enable_blend", False),
             blend_weight=intervention_config.get("blend_weight", 0.5),
         )

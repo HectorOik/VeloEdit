@@ -13,6 +13,8 @@ from .sampler import (
 from .intervention import (
     compute_reference_velocity,
     compute_element_similarity,
+    compute_cosine_similarity,
+    compute_similarity,
     apply_intervention,
 )
 from .decomposer import VelocityDecomposer
@@ -27,6 +29,8 @@ __all__ = [
     "create_sigma_schedule",
     "compute_reference_velocity",
     "compute_element_similarity",
+    "compute_cosine_similarity",
+    "compute_similarity",
     "apply_intervention",
     "VelocityDecomposer",
 ]

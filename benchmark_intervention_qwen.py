@@ -49,6 +49,12 @@ def parse_args():
                         help="Comma-separated list of intervention step counts to benchmark")
     parser.add_argument("--similarity-threshold", type=float, default=0.8,
                         help="Similarity threshold for intervention")
+    parser.add_argument("--similarity-mode", type=str, default="elementwise",
+                        choices=["elementwise", "cosine"],
+                        help="Similarity mode for mask generation and intervention")
+    parser.set_defaults(no_blend=False)
+    parser.add_argument("--enable-blend", action="store_false", dest="no_blend",
+                        help="Enable blending for low similarity elements")
     parser.add_argument("--no-blend", action="store_true",
                         help="Disable blending for low similarity elements (blend is ON by default)")
     parser.add_argument("--blend-weights", type=str, default="0.5",
@@ -120,6 +126,7 @@ def run_benchmark(args, analyzer):
     seed = args.seed
     enable_blend = not args.no_blend
     threshold = args.similarity_threshold
+    similarity_mode = args.similarity_mode
 
     # Parse intervention strengths and blend weights to benchmark
     intervention_steps_list = parse_intervention_steps(args.intervention_steps)
@@ -127,11 +134,15 @@ def run_benchmark(args, analyzer):
     print(f"[Config] Intervention steps to benchmark: {intervention_steps_list}")
     print(f"[Config] Blend weights (a values) to benchmark: {blend_weights_list}")
     print(f"[Config] Corresponding strengths (1-a): {[round(1-a, 2) for a in blend_weights_list]}")
-    print(f"[Config] similarity_threshold={threshold}, enable_blend={enable_blend}")
+    print(
+        f"[Config] similarity_threshold={threshold}, "
+        f"similarity_mode={similarity_mode}, enable_blend={enable_blend}"
+    )
 
     for int_steps in intervention_steps_list:
         # Build top-level directory
-        top_dir_name = f"{num_steps}_{int_steps}_{threshold}"
+        mode_suffix = "" if similarity_mode == "elementwise" else f"_{similarity_mode}"
+        top_dir_name = f"{num_steps}_{int_steps}_{threshold}{mode_suffix}"
         top_dir = os.path.join(args.output_path, top_dir_name)
         os.makedirs(top_dir, exist_ok=True)
 
@@ -171,6 +182,7 @@ def run_benchmark(args, analyzer):
                 "seed": seed,
                 "intervention_steps": int_steps,
                 "similarity_threshold": threshold,
+                "similarity_mode": similarity_mode,
                 "enable_blend": enable_blend,
                 "model": "Qwen-Image-Edit-2509",
                 "strengths": {},
@@ -184,6 +196,7 @@ def run_benchmark(args, analyzer):
                     "seed": seed,
                     "intervention_steps": int_steps,
                     "similarity_threshold": threshold,
+                    "similarity_mode": similarity_mode,
                     "enable_blend": enable_blend,
                     "blend_weight": bw,
                 }

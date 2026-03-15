@@ -8,6 +8,7 @@ import tqdm
 from .types import SamplingResult, InterventionConfig
 from .intervention import (
     compute_reference_velocity,
+    compute_similarity,
     apply_intervention,
     log_intervention_stats,
     log_intervention_summary,
@@ -72,8 +73,11 @@ def run_deterministic_sampling(
             v_ref = compute_reference_velocity(z, reference_latent, sigma_val)
             v_ref = v_ref.to(dtype)
 
-            from .intervention import compute_element_similarity
-            similarity = compute_element_similarity(v_pred, v_ref)
+            similarity = compute_similarity(
+                v_pred,
+                v_ref,
+                mode=intervention_config.similarity_mode,
+            )
             step_mask = (similarity < intervention_config.similarity_threshold).float()
             similarity_masks.append(step_mask.detach().clone().cpu())
 
@@ -94,6 +98,7 @@ def run_deterministic_sampling(
                 sigma=sigma_val,
                 num_replaced=num_replaced,
                 total_elements=num_elements,
+                similarity_mode=intervention_config.similarity_mode,
                 enable_blend=intervention_config.enable_blend,
                 blend_weight=intervention_config.blend_weight,
             )

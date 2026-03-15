@@ -45,6 +45,8 @@ output/
 benchmark_outputs/
 benchmark_outputs_*/
 benchmark_intervention_outputs_*/
+benchmark_intervention_outputs_flux*/
+benchmark_intervention_outputs_qwen*/
 
 # Logs
 *.log

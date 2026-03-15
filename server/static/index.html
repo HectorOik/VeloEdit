@@ -1441,6 +1441,16 @@
                   max="100"
                 />
               </div>
+              <div class="config-item">
+                <label for="similarityMode">Similarity Mode</label>
+                <select id="similarityMode">
+                  <option value="elementwise" selected>Element-wise</option>
+                  <option value="cosine">Cosine (per latent token)</option>
+                </select>
+              </div>
+            </div>
+            <div class="config-hint" style="margin-top: 8px">
+              Cosine mode computes similarity per latent token and broadcasts it back to the token channels for masking and intervention.
             </div>
 
             <!-- Blend Config -->
@@ -2374,6 +2384,8 @@
             parseInt(document.getElementById("interventionSteps").value) || 0,
           similarityThreshold:
             parseInt(document.getElementById("similarityThreshold").value) || 0,
+          similarityMode:
+            document.getElementById("similarityMode").value || "elementwise",
           enableBlend: document.getElementById("enableBlend").checked,
           blendWeight:
             parseInt(document.getElementById("blendWeight").value) || 50,
@@ -2386,6 +2398,9 @@
           `X=${config.interventionSteps}`,
           `Y=${config.similarityThreshold}%`,
         ];
+        if (config.similarityMode && config.similarityMode !== "elementwise") {
+          parts.push("Sim=Cos");
+        }
         if (config.enableBlend) {
           parts.push(`Blend=${config.blendWeight}%`);
         }
@@ -2619,6 +2634,7 @@
             seed: config.seed,
             intervention_steps: config.interventionSteps,
             similarity_threshold: config.similarityThreshold / 100,
+            similarity_mode: config.similarityMode,
             enable_blend: config.enableBlend,
             blend_weight: config.blendWeight / 100,
           }),

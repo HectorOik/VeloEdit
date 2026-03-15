@@ -43,6 +43,9 @@ def parse_args():
                         help="Number of intervention steps (0 = disabled)")
     parser.add_argument("--similarity-threshold", type=float, default=0.8,
                         help="Similarity threshold for intervention")
+    parser.add_argument("--similarity-mode", type=str, default="elementwise",
+                        choices=["elementwise", "cosine"],
+                        help="Similarity mode for mask generation and intervention")
     parser.add_argument("--enable-blend", action="store_true",
                         help="Enable blending for low similarity elements")
     parser.add_argument("--blend-weight", type=float, default=0.5,
@@ -86,6 +89,7 @@ def main():
         "seed": args.seed,
         "intervention_steps": args.intervention_steps,
         "similarity_threshold": args.similarity_threshold,
+        "similarity_mode": args.similarity_mode,
         "enable_blend": args.enable_blend,
         "blend_weight": args.blend_weight,
     }
