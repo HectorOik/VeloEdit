@@ -1,4 +1,8 @@
+"""
+cd ./VeloEdit
 
+python -m server.app --models flux:0
+"""
 import io
 import os
 import sys
