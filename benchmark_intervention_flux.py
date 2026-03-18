@@ -269,7 +269,7 @@ def run_benchmark(args, analyzer):
 
             # Optional: save analysis JSON/CSV (aggregate)
             if args.save_analysis:
-                from velocity_refactor.output import export_to_json
+                from VeloEdit.output import export_to_json
                 export_to_json(metadata, os.path.join(output_dir, "analysis.json"))
 
             if (idx + 1) % 50 == 0:

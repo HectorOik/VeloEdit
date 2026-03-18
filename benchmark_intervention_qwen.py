@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from velocity_refactor import QwenVelocityAnalyzer, get_config
+from VeloEdit import QwenVelocityAnalyzer, get_config
 
 
 def parse_args():
@@ -241,7 +241,7 @@ def run_benchmark(args, analyzer):
                 json.dump(metadata, f, indent=2)
 
             if args.save_analysis:
-                from velocity_refactor.output import export_to_json
+                from VeloEdit.output import export_to_json
                 export_to_json(metadata, os.path.join(output_dir, "analysis.json"))
 
             if (idx + 1) % 50 == 0:

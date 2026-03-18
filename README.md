@@ -98,6 +98,7 @@ python scripts/analyze.py \
 Run PIEbench benchmark:
 
 ```bash
-bash benchmark_infer.sh 
+bash benchmark_infer_flux.sh
+bash benchmark_infer_qwen.sh
 ```
 
