@@ -42,6 +42,7 @@ env/
 *.safetensors
 output/
 # results/
+benchmark/
 benchmark_outputs/
 benchmark_outputs_*/
 benchmark_intervention_outputs_*/
