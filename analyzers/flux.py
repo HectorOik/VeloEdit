@@ -88,10 +88,11 @@ class FLUXVelocityAnalyzer(BaseVelocityAnalyzer):
         max_area = 1024 ** 2
 
         current_area = height * width
-        if current_area > max_area:
-            scale = (max_area / current_area) ** 0.5
-            width = round(width * scale)
-            height = round(height * scale)
+        # Match the Kontext/Qwen benchmark path: run sampling near the 1024^2
+        # training resolution, then resize outputs back to the original size.
+        scale = (max_area / current_area) ** 0.5
+        width = round(width * scale)
+        height = round(height * scale)
 
         multiple_of = self.pipeline.vae_scale_factor * 2
         width = width // multiple_of * multiple_of
