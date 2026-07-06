@@ -10,8 +10,8 @@
 #   ./benchmark_intervention_qwen.sh --gpu 0 --start 0 --end 175  # Single GPU batch
 #   ./benchmark_intervention_qwen.sh --gpu 0,1 --multi-gpu        # Multi-GPU mode (recommended for Qwen)
 #   ./benchmark_intervention_qwen.sh --gpu 2,3 --multi-gpu --test # Multi-GPU test
-#   ./benchmark_intervention_qwen.sh --int-steps "0,3,6"          # Custom strengths
-#   ./benchmark_intervention_qwen.sh --blend --blend-weights "0.3,0.5,0.7"  # Multiple a values
+#   ./benchmark_intervention_qwen.sh --preserve-steps 4 --edit-steps 1      # Separate region steps
+#   ./benchmark_intervention_qwen.sh --blend-weights "0.3,0.5,0.7"          # Multiple a values
 #
 # Note: Qwen model is large (~7B+), multi-GPU mode (--multi-gpu) with 2+ GPUs is recommended.
 
@@ -30,10 +30,11 @@ TRUE_CFG_SCALE=4.0
 SEED=42
 
 # Velocity intervention
-INTERVENTION_STEPS="6"
+PRESERVE_INTERVENTION_STEPS=6
+EDIT_INTERVENTION_STEPS=6
 SIMILARITY_THRESHOLD=0.8
 SIMILARITY_MODE="elementwise"
-ENABLE_BLEND=""
+ENABLE_INTERV="yes"
 BLEND_WEIGHTS="0.0,0.2,0.4,0.6,0.8"
 
 # Model
@@ -108,8 +109,12 @@ while [[ $# -gt 0 ]]; do
             MULTI_GPU=""
             shift
             ;;
-        --int-steps)
-            INTERVENTION_STEPS="$2"
+        --preserve-steps)
+            PRESERVE_INTERVENTION_STEPS="$2"
+            shift 2
+            ;;
+        --edit-steps)
+            EDIT_INTERVENTION_STEPS="$2"
             shift 2
             ;;
         --threshold)
@@ -120,8 +125,8 @@ while [[ $# -gt 0 ]]; do
             SIMILARITY_MODE="$2"
             shift 2
             ;;
-        --blend)
-            ENABLE_BLEND="yes"
+        --disable-interv)
+            ENABLE_INTERV=""
             shift
             ;;
         --blend-weights)
@@ -176,10 +181,11 @@ while [[ $# -gt 0 ]]; do
             echo "  --single-gpu            Disable multi-GPU mode (requires 80GB+ GPU)"
             echo ""
             echo "Intervention options:"
-            echo "  --int-steps LIST        Comma-separated intervention step counts (default: $INTERVENTION_STEPS)"
+            echo "  --preserve-steps N      Preserve/non-edit region intervention steps; negative means effective_steps+N (default: $PRESERVE_INTERVENTION_STEPS)"
+            echo "  --edit-steps N          Edit region intervention steps; negative means effective_steps+N (default: $EDIT_INTERVENTION_STEPS)"
             echo "  --threshold F           Similarity threshold (default: $SIMILARITY_THRESHOLD)"
             echo "  --similarity-mode MODE  Similarity mode: elementwise or cosine (default: $SIMILARITY_MODE)"
-            echo "  --blend                 Enable blending for low similarity elements"
+            echo "  --disable-interv        Disable preserve replacement and edit blending"
             echo "  --blend-weights LIST    Comma-separated blend weights (a values) to benchmark (default: $BLEND_WEIGHTS)"
             echo ""
             echo "Output options:"
@@ -213,10 +219,11 @@ echo "  Guidance Scale:        $GUIDANCE_SCALE"
 echo "  True CFG Scale:        $TRUE_CFG_SCALE"
 echo "  Seed:                  $SEED"
 echo "  ---"
-echo "  Intervention Steps:    $INTERVENTION_STEPS"
+echo "  Preserve Steps:        $PRESERVE_INTERVENTION_STEPS"
+echo "  Edit Steps:            $EDIT_INTERVENTION_STEPS"
 echo "  Similarity Threshold:  $SIMILARITY_THRESHOLD"
 echo "  Similarity Mode:       $SIMILARITY_MODE"
-[ -n "$ENABLE_BLEND" ]   && echo "  Blend:                 enabled"
+echo "  Intervention:          $([ -n "$ENABLE_INTERV" ] && echo enabled || echo disabled)"
 echo "  Blend Weights:         $BLEND_WEIGHTS"
 [ -n "$MODEL_PATH" ]     && echo "  Model Path:            $MODEL_PATH"
 [ -n "$MULTI_GPU" ]      && echo "  Multi-GPU:             enabled"
@@ -239,12 +246,13 @@ CMD="python3 ${SCRIPT_DIR}/benchmark_intervention_qwen.py \
     --guidance-scale $GUIDANCE_SCALE \
     --true-cfg-scale $TRUE_CFG_SCALE \
     --seed $SEED \
-    --intervention-steps $INTERVENTION_STEPS \
+    --preserve-intervention-steps $PRESERVE_INTERVENTION_STEPS \
+    --edit-intervention-steps $EDIT_INTERVENTION_STEPS \
     --similarity-threshold $SIMILARITY_THRESHOLD \
     --similarity-mode $SIMILARITY_MODE \
     --blend-weights $BLEND_WEIGHTS"
 
-[ -n "$ENABLE_BLEND" ]     && CMD="$CMD --enable-blend"
+[ -z "$ENABLE_INTERV" ]    && CMD="$CMD --disable-interv"
 [ -n "$MODEL_PATH" ]       && CMD="$CMD --model-path $MODEL_PATH"
 [ -n "$MULTI_GPU" ]        && CMD="$CMD --multi-gpu"
 [ -n "$START_IDX" ]        && CMD="$CMD --start-idx $START_IDX"

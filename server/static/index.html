@@ -1396,7 +1396,7 @@
           <div class="intervention-config">
             <label>Velocity Intervention Config</label>
             <div class="config-note">
-              In first X steps, if preserve ratio > Y%, replace with original velocity
+                Preserve and edit regions can use separate intervention steps.
             </div>
             <div class="config-grid">
               <div class="config-item">
@@ -1420,15 +1420,25 @@
                 />
               </div>
               <div class="config-item">
-                <label for="interventionSteps">Intervention Steps (X)</label>
+                  <label for="preserveInterventionSteps">Preserve / Non-edit Steps</label>
                 <input
                   type="number"
-                  id="interventionSteps"
+                    id="preserveInterventionSteps"
                   value="1"
-                  min="0"
+                    min="-100"
                   max="100"
                 />
               </div>
+                <div class="config-item">
+                  <label for="editInterventionSteps">Edit Steps</label>
+                  <input
+                    type="number"
+                    id="editInterventionSteps"
+                    value="1"
+                    min="-100"
+                    max="100"
+                  />
+                </div>
             </div>
             <div class="config-grid-2" style="margin-top: 12px">
               <div class="config-item">
@@ -1453,7 +1463,7 @@
               Cosine mode computes similarity per latent token and broadcasts it back to the token channels for masking and intervention.
             </div>
 
-            <!-- Blend Config -->
+              <!-- Intervention Toggle and Blend Config -->
             <div
               style="
                 margin-top: 16px;
@@ -1462,13 +1472,13 @@
               "
             >
               <div class="toggle-row">
-                <label for="enableBlend">Weighted Average for Low Similarity</label>
+                  <label for="enableInterv">Enable Velocity Intervention</label>
                 <label class="toggle-switch">
-                  <input type="checkbox" id="enableBlend" />
+                    <input type="checkbox" id="enableInterv" checked />
                   <span class="toggle-slider"></span>
                 </label>
               </div>
-              <div id="blendWeightContainer" style="display: none">
+                <div id="blendWeightContainer" style="display: block">
                 <div
                   style="
                     display: flex;
@@ -1513,6 +1523,7 @@
                   <span>200%</span>
                 </div>
                 <div class="config-hint" style="margin-top: 10px">
+                    Enable Velocity Intervention controls both preserve-region replacement and edit-region blending.<br />
                   v = a&middot;v_ref + (1-a)&middot;v_pred<br />
                   a<0%: Reverse enhance edit | a=0%: Pure edit | a=50%: Blend | a=100%:
                   Pure original | a>100%: Reverse enhance preserve
@@ -1580,7 +1591,9 @@
               </div>
             </div>
 
-            <div class="config-hint">Hint: Intervention steps = 0 means no intervention</div>
+              <div class="config-hint">
+                Hint: negative region steps are resolved as effective sampling steps plus the negative value; setting both region steps to 0 or disabling intervention means analysis only
+              </div>
           </div>
 
           <!-- Config Presets -->
@@ -2210,8 +2223,8 @@
       const historySeed = document.getElementById("historySeed");
       const historyTime = document.getElementById("historyTime");
 
-      // Blend elements
-      const enableBlendCheckbox = document.getElementById("enableBlend");
+      // Intervention and blend elements
+      const enableIntervCheckbox = document.getElementById("enableInterv");
       const blendWeightContainer = document.getElementById(
         "blendWeightContainer",
       );
@@ -2291,25 +2304,31 @@
       }
 
       // =====================================================================
-      // Event Handlers: Blend Toggle & Slider
+      // Event Handlers: Intervention Toggle & Slider
       // =====================================================================
-      enableBlendCheckbox.onchange = function () {
-        blendWeightContainer.style.display = this.checked ? "block" : "none";
-      };
+      function updateInterventionControls() {
+        const enabled = enableIntervCheckbox.checked;
+        blendWeightSlider.disabled = !enabled;
+        blendWeightContainer.style.opacity = enabled ? "1" : "0.45";
+      }
+
+      enableIntervCheckbox.onchange = updateInterventionControls;
 
       blendWeightSlider.oninput = function () {
         blendWeightDisplay.textContent = `${parseInt(this.value)}%`;
       };
+
+      updateInterventionControls();
 
       // =====================================================================
       // Event Handlers: Range Scan Toggle
       // =====================================================================
       enableRangeScanCheckbox.onchange = function () {
         rangeScanContainer.style.display = this.checked ? "block" : "none";
-        // Auto-enable blend when range scan is on
+        // Auto-enable intervention when range scan is on
         if (this.checked) {
-          enableBlendCheckbox.checked = true;
-          blendWeightContainer.style.display = "block";
+          enableIntervCheckbox.checked = true;
+          updateInterventionControls();
         }
         updateScanCountPreview();
       };
@@ -2380,13 +2399,15 @@
         return {
           numSteps: parseInt(document.getElementById("numSteps").value) || 12,
           seed: parseInt(document.getElementById("seed").value) || 42,
-          interventionSteps:
-            parseInt(document.getElementById("interventionSteps").value) || 0,
+          preserveInterventionSteps:
+            parseInt(document.getElementById("preserveInterventionSteps").value) || 0,
+          editInterventionSteps:
+            parseInt(document.getElementById("editInterventionSteps").value) || 0,
           similarityThreshold:
             parseInt(document.getElementById("similarityThreshold").value) || 0,
           similarityMode:
             document.getElementById("similarityMode").value || "elementwise",
-          enableBlend: document.getElementById("enableBlend").checked,
+          enableInterv: document.getElementById("enableInterv").checked,
           blendWeight:
             parseInt(document.getElementById("blendWeight").value) || 50,
         };
@@ -2395,14 +2416,16 @@
       function formatConfigSummary(config) {
         let parts = [
           `N=${config.numSteps}`,
-          `X=${config.interventionSteps}`,
+          `Pres=${config.preserveInterventionSteps}`,
+          `Edit=${config.editInterventionSteps}`,
           `Y=${config.similarityThreshold}%`,
+          `Interv=${config.enableInterv ? "On" : "Off"}`,
         ];
         if (config.similarityMode && config.similarityMode !== "elementwise") {
           parts.push("Sim=Cos");
         }
-        if (config.enableBlend) {
-          parts.push(`Blend=${config.blendWeight}%`);
+        if (config.enableInterv) {
+          parts.push(`a=${config.blendWeight}%`);
         }
         return parts.join(", ");
       }
@@ -2467,7 +2490,7 @@
             name: `a = ${a}%`,
             config: {
               ...baseConfig,
-              enableBlend: true,
+                enableInterv: true,
               blendWeight: a,
             },
             aValue: a,
@@ -2632,10 +2655,11 @@
             image_name: uploadedImageName,
             num_inference_steps: config.numSteps,
             seed: config.seed,
-            intervention_steps: config.interventionSteps,
+            preserve_intervention_steps: config.preserveInterventionSteps,
+            edit_intervention_steps: config.editInterventionSteps,
             similarity_threshold: config.similarityThreshold / 100,
             similarity_mode: config.similarityMode,
-            enable_blend: config.enableBlend,
+            enable_interv: config.enableInterv,
             blend_weight: config.blendWeight / 100,
           }),
         });
@@ -2704,7 +2728,7 @@
               displayResults(comparisonResults[0].data);
               const interventionInfo =
                 comparisonResults[0].data.interventions_applied > 0
-                  ? `, Intervened ${comparisonResults[0].data.interventions_applied} steps`
+                    ? `, affected ${comparisonResults[0].data.interventions_applied} velocity elements`
                   : "";
               statusBar.textContent = `Analysis completed. Model used: ${comparisonResults[0].data.model_name}${interventionInfo}. Click "Save"Saveresult`;
             }
@@ -2987,16 +3011,20 @@
                   <span class="param-value">${config.numSteps}</span>
                 </div>
                 <div class="param-row">
-                  <span class="param-name">Intervention Steps (X)</span>
-                  <span class="param-value">${config.interventionSteps}</span>
+                  <span class="param-name">Preserve Steps</span>
+                  <span class="param-value">${config.preserveInterventionSteps}</span>
+                </div>
+                <div class="param-row">
+                  <span class="param-name">Edit Steps</span>
+                  <span class="param-value">${config.editInterventionSteps}</span>
                 </div>
                 <div class="param-row">
                   <span class="param-name">Similarity Threshold (Y)</span>
                   <span class="param-value">${config.similarityThreshold}%</span>
                 </div>
                 <div class="param-row">
-                  <span class="param-name">Weighted Average</span>
-                  <span class="param-value">${config.enableBlend ? `Enabled (${config.blendWeight}%)` : "Disabled"}</span>
+                  <span class="param-name">Intervention</span>
+                  <span class="param-value">${config.enableInterv ? `Enabled (a=${config.blendWeight}%)` : "Disabled"}</span>
                 </div>
                 <div class="param-row">
                   <span class="param-name">Avg Preserve Ratio</span>

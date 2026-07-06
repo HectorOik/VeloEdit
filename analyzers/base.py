@@ -61,10 +61,11 @@ class BaseVelocityAnalyzer(ABC):
             return InterventionConfig()
 
         return InterventionConfig(
-            steps=intervention_config.get("intervention_steps", 0),
+            preserve_steps=intervention_config.get("preserve_intervention_steps", 0),
+            edit_steps=intervention_config.get("edit_intervention_steps", 0),
             similarity_threshold=intervention_config.get("similarity_threshold", 0.8),
             similarity_mode=intervention_config.get("similarity_mode", "elementwise"),
-            enable_blend=intervention_config.get("enable_blend", False),
+            enable_interv=intervention_config.get("enable_interv", True),
             blend_weight=intervention_config.get("blend_weight", 0.5),
         )
 
@@ -279,6 +280,8 @@ class BaseVelocityAnalyzer(ABC):
             similarity_mask_images=mask_images if mask_images else None,
             similarity_heatmap_images=heatmap_images if heatmap_images else None,
             interventions_applied=sampling_result.interventions_applied,
+            preserve_interventions_applied=sampling_result.preserve_interventions_applied,
+            edit_interventions_applied=sampling_result.edit_interventions_applied,
         )
 
     def analyze_batch(

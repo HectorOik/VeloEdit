@@ -12,6 +12,7 @@ from diffusers.pipelines.flux.pipeline_flux_kontext import (
 )
 
 from .base import BaseVelocityAnalyzer
+from ..core.sampler import align_first_step_to_six_step, log_sampling_schedule
 
 
 class FLUXVelocityAnalyzer(BaseVelocityAnalyzer):
@@ -150,7 +151,8 @@ class FLUXVelocityAnalyzer(BaseVelocityAnalyzer):
 
         reference_latent = image_latents.clone() if image_latents is not None else latents.clone()
 
-        sigmas = np.linspace(1.0, 1 / num_inference_steps, num_inference_steps)
+        requested_num_inference_steps = num_inference_steps
+        sigmas = np.linspace(1.0, 1 / requested_num_inference_steps, requested_num_inference_steps)
         image_seq_len = latents.shape[1]
         mu = calculate_shift(
             image_seq_len,
@@ -161,12 +163,37 @@ class FLUXVelocityAnalyzer(BaseVelocityAnalyzer):
         )
         timesteps, num_inference_steps = retrieve_timesteps(
             self.pipeline.scheduler,
-            num_inference_steps,
+            requested_num_inference_steps,
             device,
             sigmas=sigmas,
             mu=mu,
         )
-        sigma_schedule = self.pipeline.scheduler.sigmas.float()
+        raw_sigma_schedule = self.pipeline.scheduler.sigmas.float().clone()
+        sigma_schedule_6 = None
+        sigma_schedule = raw_sigma_schedule
+
+        if requested_num_inference_steps > 6:
+            sigmas_6 = np.linspace(1.0, 1 / 6, 6)
+            retrieve_timesteps(
+                self.pipeline.scheduler,
+                6,
+                device,
+                sigmas=sigmas_6,
+                mu=mu,
+            )
+            sigma_schedule_6 = self.pipeline.scheduler.sigmas.float().clone()
+            sigma_schedule = align_first_step_to_six_step(
+                raw_sigma_schedule,
+                sigma_schedule_6,
+            )
+
+        log_sampling_schedule(
+            "FLUX",
+            requested_num_inference_steps,
+            raw_sigma_schedule,
+            sigma_schedule,
+            sigma_schedule_6,
+        )
 
         guidance_scale = self.config.sampling.guidance_scale
         if self.pipeline.transformer.config.guidance_embeds:

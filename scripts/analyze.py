@@ -39,15 +39,17 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed")
 
-    parser.add_argument("--intervention-steps", type=int, default=0,
-                        help="Number of intervention steps (0 = disabled)")
+    parser.add_argument("--preserve-intervention-steps", type=int, default=0,
+                        help="Intervention steps for preserve/non-edit region; negative values mean effective_steps + value")
+    parser.add_argument("--edit-intervention-steps", type=int, default=0,
+                        help="Intervention steps for edit region; negative values mean effective_steps + value")
     parser.add_argument("--similarity-threshold", type=float, default=0.8,
                         help="Similarity threshold for intervention")
     parser.add_argument("--similarity-mode", type=str, default="elementwise",
                         choices=["elementwise", "cosine"],
                         help="Similarity mode for mask generation and intervention")
-    parser.add_argument("--enable-blend", action="store_true",
-                        help="Enable blending for low similarity elements")
+    parser.add_argument("--disable-interv", action="store_true",
+                        help="Disable preserve replacement and edit blending")
     parser.add_argument("--blend-weight", type=float, default=0.5,
                         help="Blend weight (a) for reference velocity")
 
@@ -87,10 +89,11 @@ def main():
     intervention_config = {
         "num_inference_steps": args.steps,
         "seed": args.seed,
-        "intervention_steps": args.intervention_steps,
+        "preserve_intervention_steps": args.preserve_intervention_steps,
+        "edit_intervention_steps": args.edit_intervention_steps,
         "similarity_threshold": args.similarity_threshold,
         "similarity_mode": args.similarity_mode,
-        "enable_blend": args.enable_blend,
+        "enable_interv": not args.disable_interv,
         "blend_weight": args.blend_weight,
     }
 

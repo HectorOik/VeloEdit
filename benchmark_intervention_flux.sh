@@ -5,30 +5,32 @@
 # Each strength produces a separate output subdirectory (int0, int2, int4, ...).
 #
 # Usage:
-#   ./benchmark_intervention.sh                              # Full run, default strengths
-#   ./benchmark_intervention.sh --test                       # Test run (5 images)
-#   ./benchmark_intervention.sh --gpu 0 --start 0 --end 175 # Batch processing
-#   ./benchmark_intervention.sh --int-steps "0,3,6"          # Custom strengths
-#   ./benchmark_intervention.sh --blend --blend-weights "0.3,0.5,0.7"  # Multiple a values
+#    CUDA_DEVICE=3 bash benchmark_intervention_flux.sh
+#   ./benchmark_intervention_flux.sh                              # Full run, default strengths
+#   ./benchmark_intervention_flux.sh --test                       # Test run (5 images)
+#   ./benchmark_intervention_flux.sh --gpu 0 --start 0 --end 175 # Batch processing
+#   ./benchmark_intervention_flux.sh --preserve-steps 4 --edit-steps 1      # Separate region steps
+#   ./benchmark_intervention_flux.sh --blend-weights "0.3,0.5,0.7"          # Multiple a values
 
 set -e
 
 # ======== Default Configuration ========
-CUDA_DEVICE=${CUDA_DEVICE:-0}
+CUDA_DEVICE=${CUDA_DEVICE:-5}
 BENCHMARK_PATH="./benchmark"
 OUTPUT_PATH="./benchmark_intervention_outputs_flux"
 
 # Sampling (flux_config defaults)
-NUM_INFERENCE_STEPS=6
+NUM_INFERENCE_STEPS=12
 GUIDANCE_SCALE=2.5
 SEED=42
 
 # Velocity intervention
-INTERVENTION_STEPS="1"
+PRESERVE_INTERVENTION_STEPS=-2
+EDIT_INTERVENTION_STEPS=1
 SIMILARITY_THRESHOLD=0.8
 # SIMILARITY_MODE="cosine"
 SIMILARITY_MODE="elementwise"
-ENABLE_BLEND=""
+ENABLE_INTERV="yes"
 BLEND_WEIGHTS="0.0,0.2,0.4,0.6,0.8"
 # BLEND_WEIGHTS="0.0"
 
@@ -95,8 +97,12 @@ while [[ $# -gt 0 ]]; do
             MODEL_PATH="$2"
             shift 2
             ;;
-        --int-steps)
-            INTERVENTION_STEPS="$2"
+        --preserve-steps)
+            PRESERVE_INTERVENTION_STEPS="$2"
+            shift 2
+            ;;
+        --edit-steps)
+            EDIT_INTERVENTION_STEPS="$2"
             shift 2
             ;;
         --threshold)
@@ -107,8 +113,8 @@ while [[ $# -gt 0 ]]; do
             SIMILARITY_MODE="$2"
             shift 2
             ;;
-        --blend)
-            ENABLE_BLEND="yes"
+        --disable-interv)
+            ENABLE_INTERV=""
             shift
             ;;
         --blend-weights)
@@ -161,10 +167,11 @@ while [[ $# -gt 0 ]]; do
             echo "  --model-path PATH       Override model path"
             echo ""
             echo "Intervention options:"
-            echo "  --int-steps LIST        Comma-separated intervention step counts (default: $INTERVENTION_STEPS)"
+            echo "  --preserve-steps N      Preserve/non-edit region intervention steps; negative means effective_steps+N (default: $PRESERVE_INTERVENTION_STEPS)"
+            echo "  --edit-steps N          Edit region intervention steps; negative means effective_steps+N (default: $EDIT_INTERVENTION_STEPS)"
             echo "  --threshold F           Similarity threshold (default: $SIMILARITY_THRESHOLD)"
             echo "  --similarity-mode MODE  Similarity mode: elementwise or cosine (default: $SIMILARITY_MODE)"
-            echo "  --blend                 Enable blending for low similarity elements"
+            echo "  --disable-interv        Disable preserve replacement and edit blending"
             echo "  --blend-weights LIST    Comma-separated blend weights (a values) to benchmark (default: $BLEND_WEIGHTS)"
             echo ""
             echo "Output options:"
@@ -197,10 +204,11 @@ echo "  Inference Steps:       $NUM_INFERENCE_STEPS"
 echo "  Guidance Scale:        $GUIDANCE_SCALE"
 echo "  Seed:                  $SEED"
 echo "  ---"
-echo "  Intervention Steps:    $INTERVENTION_STEPS"
+echo "  Preserve Steps:        $PRESERVE_INTERVENTION_STEPS"
+echo "  Edit Steps:            $EDIT_INTERVENTION_STEPS"
 echo "  Similarity Threshold:  $SIMILARITY_THRESHOLD"
 echo "  Similarity Mode:       $SIMILARITY_MODE"
-[ -n "$ENABLE_BLEND" ]   && echo "  Blend:                 enabled"
+echo "  Intervention:          $([ -n "$ENABLE_INTERV" ] && echo enabled || echo disabled)"
 echo "  Blend Weights:         $BLEND_WEIGHTS"
 [ -n "$LORA_PATH" ]      && echo "  LoRA:                  $LORA_PATH"
 [ -n "$MODEL_PATH" ]     && echo "  Model Path:            $MODEL_PATH"
@@ -222,12 +230,13 @@ CMD="python3 ${SCRIPT_DIR}/benchmark_intervention_flux.py \
     --num-inference-steps $NUM_INFERENCE_STEPS \
     --guidance-scale $GUIDANCE_SCALE \
     --seed $SEED \
-    --intervention-steps $INTERVENTION_STEPS \
+    --preserve-intervention-steps $PRESERVE_INTERVENTION_STEPS \
+    --edit-intervention-steps $EDIT_INTERVENTION_STEPS \
     --similarity-threshold $SIMILARITY_THRESHOLD \
     --similarity-mode $SIMILARITY_MODE \
     --blend-weights $BLEND_WEIGHTS"
 
-[ -n "$ENABLE_BLEND" ]     && CMD="$CMD --enable-blend"
+[ -z "$ENABLE_INTERV" ]    && CMD="$CMD --disable-interv"
 [ -n "$LORA_PATH" ]        && CMD="$CMD --lora $LORA_PATH"
 [ -n "$MODEL_PATH" ]       && CMD="$CMD --model-path $MODEL_PATH"
 [ -n "$START_IDX" ]        && CMD="$CMD --start-idx $START_IDX"

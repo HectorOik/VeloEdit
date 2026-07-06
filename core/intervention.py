@@ -104,70 +104,80 @@ def apply_intervention(
     v_pred: torch.Tensor,
     v_ref: torch.Tensor,
     config: InterventionConfig,
+    preserve_active: bool,
+    edit_active: bool,
+    similarity: Optional[torch.Tensor] = None,
     eps: float = 1e-8,
-) -> Tuple[torch.Tensor, torch.Tensor, int]:
+) -> Tuple[torch.Tensor, torch.Tensor, int, int]:
     dtype = v_pred.dtype
 
-    similarity = compute_similarity(
-        v_pred,
-        v_ref,
-        mode=config.similarity_mode,
-        eps=eps,
-    )
+    if similarity is None:
+        similarity = compute_similarity(
+            v_pred,
+            v_ref,
+            mode=config.similarity_mode,
+            eps=eps,
+        )
 
     threshold = config.similarity_threshold
     high_sim_mask = similarity >= threshold
     low_sim_mask = ~high_sim_mask
 
-    num_high_sim = high_sim_mask.sum().item()
-
     v_ref_dtype = v_ref.to(dtype)
+    result = v_pred
+    preserve_count = 0
+    edit_count = 0
 
-    result = torch.where(high_sim_mask, v_ref_dtype, v_pred)
+    if preserve_active:
+        result = torch.where(high_sim_mask, v_ref_dtype, result)
+        preserve_count = int(high_sim_mask.sum().item())
 
-    if config.enable_blend:
+    if edit_active:
         a = config.blend_weight
         blended = a * v_ref_dtype + (1 - a) * v_pred
         result = torch.where(low_sim_mask, blended, result)
+        edit_count = int(low_sim_mask.sum().item())
 
     similarity_mask = (similarity < threshold).float()
 
-    return result, similarity_mask, int(num_high_sim)
+    return result, similarity_mask, preserve_count, edit_count
 
 
 def log_intervention_stats(
     step: int,
     sigma: float,
-    num_replaced: int,
+    preserve_active: bool,
+    edit_active: bool,
+    preserve_count: int,
+    edit_count: int,
     total_elements: int,
     similarity_mode: str = "elementwise",
-    enable_blend: bool = False,
     blend_weight: float = 0.5,
 ) -> None:
-    ratio = num_replaced / total_elements * 100 if total_elements > 0 else 0
-    num_low_sim = total_elements - num_replaced
+    preserve_ratio = preserve_count / total_elements * 100 if total_elements > 0 else 0
+    edit_ratio = edit_count / total_elements * 100 if total_elements > 0 else 0
+    preserve_state = "on" if preserve_active else "off"
+    edit_state = "on" if edit_active else "off"
 
-    if enable_blend:
-        print(
-            f"  Step {step}: sigma={sigma:.4f}, "
-            f"high_sim={num_replaced} ({ratio:.1f}%) replaced, "
-            f"low_sim={num_low_sim} ({100-ratio:.1f}%) blended (a={blend_weight:.2f})"
-        )
-    else:
-        print(
-            f"  Step {step}: {similarity_mode} intervention, sigma={sigma:.4f}, "
-            f"replaced {num_replaced}/{total_elements} ({ratio:.1f}%)"
-        )
+    print(
+        f"  Step {step}: {similarity_mode} intervention, sigma={sigma:.4f}, "
+        f"preserve[{preserve_state}]={preserve_count}/{total_elements} "
+        f"({preserve_ratio:.1f}%) replaced, "
+        f"edit[{edit_state}]={edit_count}/{total_elements} "
+        f"({edit_ratio:.1f}%) blended (a={blend_weight:.2f})"
+    )
 
 
 def log_intervention_summary(
-    total_replaced: int,
-    total_checked: int,
-    intervention_steps: int,
+    total_preserve: int,
+    total_edit: int,
+    preserve_steps: int,
+    edit_steps: int,
 ) -> None:
-    if total_checked > 0:
-        ratio = total_replaced / total_checked * 100
+    total = total_preserve + total_edit
+    if total > 0:
         print(
-            f"[Intervention Summary] Total replaced: {total_replaced}/{total_checked} "
-            f"({ratio:.2f}%) across {intervention_steps} steps"
+            f"[Intervention Summary] preserve_steps={preserve_steps}, edit_steps={edit_steps}, "
+            f"preserve_affected={total_preserve}, edit_affected={total_edit}, "
+            f"total_affected={total}"
         )

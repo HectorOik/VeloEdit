@@ -20,6 +20,7 @@ from PIL import Image
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from VeloEdit.core.image_compare import save_compare_artifacts
 from VeloEdit.server.wrapper import create_analyzer, AnalyzerWrapper
 
 RESULTS_DIR = Path(__file__).parent.parent / "results"
@@ -112,7 +113,10 @@ def save_images_to_disk(
             img.save(filepath)
             saved_paths.append(str(filepath))
 
+        compare_paths = save_compare_artifacts(images, subfolder)
+        saved_paths.extend(compare_paths)
         print(f"Saved {len(images)} images to: {subfolder}")
+        print(f"Saved compare artifacts: {compare_paths}")
 
     return saved_paths
 
@@ -206,10 +210,11 @@ def analyze():
 
         num_inference_steps = data.get("num_inference_steps", 15)
         seed = data.get("seed", 42)
-        intervention_steps = data.get("intervention_steps", 0)
+        preserve_intervention_steps = data.get("preserve_intervention_steps", 0)
+        edit_intervention_steps = data.get("edit_intervention_steps", 0)
         similarity_threshold = data.get("similarity_threshold", 0.8)
         similarity_mode = data.get("similarity_mode", "elementwise")
-        enable_blend = data.get("enable_blend", False)
+        enable_interv = data.get("enable_interv", True)
         blend_weight = data.get("blend_weight", 0.5)
 
         if not all([image_data, prompt, model_type]):
@@ -238,10 +243,11 @@ def analyze():
         intervention_config = {
             "num_inference_steps": num_inference_steps,
             "seed": seed,
-            "intervention_steps": intervention_steps,
+            "preserve_intervention_steps": preserve_intervention_steps,
+            "edit_intervention_steps": edit_intervention_steps,
             "similarity_threshold": similarity_threshold,
             "similarity_mode": similarity_mode,
-            "enable_blend": enable_blend,
+            "enable_interv": enable_interv,
             "blend_weight": blend_weight,
         }
 
@@ -254,6 +260,8 @@ def analyze():
             "num_steps": result.num_steps,
             "summary": result.summary,
             "interventions_applied": result.interventions_applied,
+            "preserve_interventions_applied": result.preserve_interventions_applied,
+            "edit_interventions_applied": result.edit_interventions_applied,
             "per_step": [
                 {
                     "step": d.step,

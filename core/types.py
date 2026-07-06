@@ -1,19 +1,20 @@
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 import torch
 
 
 @dataclass
 class InterventionConfig:
-    steps: int = 0
+    preserve_steps: int = 0
+    edit_steps: int = 0
     similarity_threshold: float = 0.8
     similarity_mode: str = "elementwise"
-    enable_blend: bool = False
+    enable_interv: bool = True
     blend_weight: float = 0.5
 
     def is_enabled(self) -> bool:
-        return self.steps > 0
+        return self.enable_interv and (self.preserve_steps != 0 or self.edit_steps != 0)
 
 
 @dataclass
@@ -25,6 +26,8 @@ class SamplingResult:
     sigmas: List[float]
     similarity_masks: Optional[List[torch.Tensor]] = None
     interventions_applied: int = 0
+    preserve_interventions_applied: int = 0
+    edit_interventions_applied: int = 0
 
 
 @dataclass
@@ -63,3 +66,5 @@ class AnalysisResult:
     similarity_heatmap_images: Optional[List[Any]] = None
 
     interventions_applied: int = 0
+    preserve_interventions_applied: int = 0
+    edit_interventions_applied: int = 0
